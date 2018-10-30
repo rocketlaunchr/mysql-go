@@ -21,8 +21,8 @@ go get -u github.com/rocketlaunchr/mysql-go
 ```go
 
 import (
-	stdSql "database/sql"
-	"github.com/rocketlaunchr/mysql-go"
+   stdSql "database/sql"
+   "github.com/rocketlaunchr/mysql-go"
 )
 
 _pool, _ := stdSql.Open("mysql", "user:password@/dbname")
@@ -70,7 +70,9 @@ tx.Commit()
 ## Cancel Query
 
 Cancel the context. This will call `KILL` to MYSQL automatically.
+
 It is highly recommended you set a KillerPool when you instantiate the `DB` object.
+
 The KillerPool is used to call the `KILL` signal.
 
 

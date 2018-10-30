@@ -41,7 +41,7 @@ pool := sql.DB{_pool, _killerPool}
 conn, err := pool.Conn(ctx)
 defer conn.Close() // Return the connection back to the pool
 
-// Perform your read operation. Cancel
+// Perform your read operation.
 rows, err := conn.QueryContext(ctx, stmt)
 if err != nil {
    return err
@@ -52,6 +52,7 @@ if err != nil {
 ## Write Query
 
 ```go
+
 // Obtain an exclusive connection
 conn, err := pool.Conn(ctx)
 defer conn.Close() // Return the connection back to the pool
@@ -69,7 +70,7 @@ tx.Commit()
 
 ## Cancel Query
 
-Cancel the context. This will call `KILL` to MYSQL automatically.
+Cancel the context. This will send `KILL` signal to MySQL automatically.
 
 It is highly recommended you set a KillerPool when you instantiate the `DB` object.
 

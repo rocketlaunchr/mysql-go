@@ -4,7 +4,7 @@ Canceling MySQL in Go [![GoDoc](http://godoc.org/github.com/rocketlaunchr/mysql-
 This package is an experimental package to help you cancel MySQL queries.
 It may or may not be suitable for your needs.
 
-See [Article here](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827ed8f83b30) for more information.
+See [Article](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827ed8f83b30) for more information.
 
 ## Dependencies
 

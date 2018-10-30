@@ -79,6 +79,8 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 
 	err = conn.QueryRowContext(ctx, "SELECT CONNECTION_ID()").Scan(&connectionID)
 	if err != nil {
+		// Return the connection back to the pool
+		conn.Close()
 		return nil, err
 	}
 

@@ -27,7 +27,7 @@ import (
 
 _pool, _ := stdSql.Open("mysql", "user:password@/dbname")
 _killerPool, _ := stdSql.Open("mysql", "user:password@/dbname")
-
+_killerPool.SetMaxOpenConns(1)
 
 pool := sql.DB{_pool, _killerPool}
 

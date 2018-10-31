@@ -1,10 +1,12 @@
 Canceling MySQL in Go [![GoDoc](http://godoc.org/github.com/rocketlaunchr/mysql-go?status.svg)](http://godoc.org/github.com/rocketlaunchr/mysql-go) [![Go Report Card](https://goreportcard.com/badge/github.com/rocketlaunchr/mysql-go)](https://goreportcard.com/report/github.com/rocketlaunchr/mysql-go)
 ===============
 
-This package is an experimental package to help you cancel MySQL queries.
-It may or may not be suitable for your needs.
+This package is an experimental package to help you properly cancel MySQL queries.
+It may or may not be suitable for your needs. Field reports are greatly appreciated.
 
-See [Article](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827ed8f83b30) for more information.
+See [Article](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827ed8f83b30) for details of the behind-the-scenes magic.
+
+The API is designed to resemble the standard library.
 
 ## Dependencies
 
@@ -22,14 +24,14 @@ go get -u github.com/rocketlaunchr/mysql-go
 
 import (
    stdSql "database/sql"
-   "github.com/rocketlaunchr/mysql-go"
+   sql "github.com/rocketlaunchr/mysql-go"
 )
 
-_pool, _ := stdSql.Open("mysql", "user:password@/dbname")
-_killerPool, _ := stdSql.Open("mysql", "user:password@/dbname")
-_killerPool.SetMaxOpenConns(1)
+p, _ := stdSql.Open("mysql", "user:password@/dbname")
+kP, _ := stdSql.Open("mysql", "user:password@/dbname")
+kP.SetMaxOpenConns(1)
 
-pool := sql.DB{_pool, _killerPool}
+pool := sql.DB{p, kP}
 
 ```
 
@@ -70,7 +72,7 @@ tx.Commit()
 
 ## Cancel Query
 
-Cancel the context. This will send `KILL` signal to MySQL automatically.
+Cancel the context. This will send a `KILL` signal to MySQL automatically.
 
 It is highly recommended you set a KillerPool when you instantiate the `DB` object.
 

@@ -1,7 +1,7 @@
 Canceling MySQL in Go [![GoDoc](http://godoc.org/github.com/rocketlaunchr/mysql-go?status.svg)](http://godoc.org/github.com/rocketlaunchr/mysql-go) [![Go Report Card](https://goreportcard.com/badge/github.com/rocketlaunchr/mysql-go)](https://goreportcard.com/report/github.com/rocketlaunchr/mysql-go)
 ===============
 
-This package is an experimental package to help you properly cancel MySQL queries.
+This is an experimental package to help you properly cancel MySQL queries. Without this package, context cancelation does not actually cancel a MySQL query.
 It may or may not be suitable for your needs. Field reports are greatly appreciated.
 
 See [Article](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827ed8f83b30) for details of the behind-the-scenes magic.
@@ -28,7 +28,7 @@ import (
 )
 
 p, _ := stdSql.Open("mysql", "user:password@/dbname")
-kP, _ := stdSql.Open("mysql", "user:password@/dbname")
+kP, _ := stdSql.Open("mysql", "user:password@/dbname") // KillerPool
 kP.SetMaxOpenConns(1)
 
 pool := sql.DB{p, kP}

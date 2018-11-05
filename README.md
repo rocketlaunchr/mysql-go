@@ -31,7 +31,7 @@ p, _ := stdSql.Open("mysql", "user:password@/dbname")
 kP, _ := stdSql.Open("mysql", "user:password@/dbname") // KillerPool
 kP.SetMaxOpenConns(1)
 
-pool := sql.DB{p, kP}
+pool := &sql.DB{p, kP}
 
 ```
 

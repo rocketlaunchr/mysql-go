@@ -88,7 +88,6 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 		return &Conn{conn, db.DB, connectionID}, nil
 	}
 	return &Conn{conn, db.KillerPool, connectionID}, nil
-
 }
 
 // Driver returns the database's underlying driver.

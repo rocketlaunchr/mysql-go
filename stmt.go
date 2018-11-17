@@ -132,6 +132,5 @@ func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *stdSql
 		}
 	}()
 
-	row := s.QueryRowContext(ctx, args...)
-	return row
+	return s.QueryRowContext(ctx, args...)
 }

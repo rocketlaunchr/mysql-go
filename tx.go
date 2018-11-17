@@ -213,8 +213,7 @@ func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interfa
 		}
 	}()
 
-	row := tx.tx.QueryRowContext(ctx, query, args...)
-	return row
+	return tx.tx.QueryRowContext(ctx, query, args...)
 }
 
 // Rollback aborts the transaction.

@@ -91,44 +91,15 @@ func (s *Stmt) Query(args ...interface{}) (*stdSql.Rows, error) {
 // and returns the query results as a *Rows.
 func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*stdSql.Rows, error) {
 
-	// Create a context that is used to cancel QueryContext()
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	outChan := make(chan *stdSql.Rows)
-	errChan := make(chan error)
-	returnedChan := make(chan struct{}) // Used to indicate that this function has returned
-
+	// We can't use the same approach used in ExecContext because defer cancelFunc()
+	// cancels rows.Scan.
 	defer func() {
-		returnedChan <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			// context has been canceled
+		if ctx.Err() != nil {
 			kill(s.killerPool, s.connectionID)
-			errChan <- ctx.Err()
-		case <-returnedChan:
 		}
 	}()
 
-	go func() {
-		res, err := s.QueryContext(cancelCtx, args...)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		outChan <- res
-	}()
-
-	select {
-	case err := <-errChan:
-		return nil, err
-	case out := <-outChan:
-		return out, nil
-	}
-
+	return s.QueryContext(ctx, args...)
 }
 
 // QueryRow executes a prepared query statement with the given arguments.

@@ -177,44 +177,15 @@ func (tx *Tx) Query(query string, args ...interface{}) (*stdSql.Rows, error) {
 // QueryContext executes a query that returns rows, typically a SELECT.
 func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*stdSql.Rows, error) {
 
-	// Create a context that is used to cancel QueryContext()
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	outChan := make(chan *stdSql.Rows)
-	errChan := make(chan error)
-	returnedChan := make(chan struct{}) // Used to indicate that this function has returned
-
+	// We can't use the same approach used in ExecContext because defer cancelFunc()
+	// cancels rows.Scan.
 	defer func() {
-		returnedChan <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			// context has been canceled
+		if ctx.Err() != nil {
 			kill(tx.killerPool, tx.connectionID)
-			errChan <- ctx.Err()
-		case <-returnedChan:
 		}
 	}()
 
-	go func() {
-		res, err := tx.tx.QueryContext(cancelCtx, query, args...)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		outChan <- res
-	}()
-
-	select {
-	case err := <-errChan:
-		return nil, err
-	case out := <-outChan:
-		return out, nil
-	}
-
+	return tx.tx.QueryContext(ctx, query, args...)
 }
 
 // QueryRow executes a query that is expected to return at most one row.

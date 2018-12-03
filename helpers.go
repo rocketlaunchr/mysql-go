@@ -4,9 +4,6 @@ package sql
 
 import (
 	stdSql "database/sql"
-
-	// Import the mysql package
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // kill is used to kill a running query.

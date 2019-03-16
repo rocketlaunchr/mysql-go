@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	MySQL   = "mysql"
+	MariaDB = "mariadb"
+)
+
 // DB is a database handle representing a pool of zero or more
 // underlying connections. It's safe for concurrent use by multiple
 // goroutines.
@@ -24,9 +29,19 @@ import (
 type DB struct {
 	// DB is the primary connection pool
 	DB *stdSql.DB
+
 	// KillerPool is an optional (but recommended) secondary connection pool.
 	// If provided, it is used to fire KILL signals.
 	KillerPool *stdSql.DB
+
+	// Flavor is either "mysql" or "mariadb". The default is mysql when not set.
+	Flavor string
+
+	// KillTimeout represents the maximum duration the kill signal should be attempted for.
+	// It should only be set if the database is behind a reverse proxy.
+	// NOTE: Currently reverse proxy support is not available for mariadb, so this must be set
+	// to nil.
+	KillTimeout *time.Duration
 }
 
 // Begin starts a transaction. The default isolation level is dependent on
@@ -76,18 +91,28 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 
 	// Determine the connection's connection_id
 	var connectionID string
+	var serverID string
 
-	err = conn.QueryRowContext(ctx, "SELECT CONNECTION_ID()").Scan(&connectionID)
-	if err != nil {
-		// Return the connection back to the pool
-		conn.Close()
-		return nil, err
+	if db.Flavor == MariaDB {
+		err = conn.QueryRowContext(ctx, "SELECT CONNECTION_ID()").Scan(&connectionID)
+		if err != nil {
+			// Return the connection back to the pool
+			conn.Close()
+			return nil, err
+		}
+	} else {
+		err = conn.QueryRowContext(ctx, "SELECT CONNECTION_ID(), @@global.server_uuid").Scan(&connectionID, &serverID)
+		if err != nil {
+			// Return the connection back to the pool
+			conn.Close()
+			return nil, err
+		}
 	}
 
 	if db.KillerPool == nil {
-		return &Conn{conn, db.DB, connectionID}, nil
+		return &Conn{conn, db.DB, connectionID, serverID, db.Flavor, db.KillTimeout}, nil
 	}
-	return &Conn{conn, db.KillerPool, connectionID}, nil
+	return &Conn{conn, db.KillerPool, connectionID, serverID, db.Flavor, db.KillTimeout}, nil
 }
 
 // Driver returns the database's underlying driver.

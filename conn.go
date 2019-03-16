@@ -5,6 +5,7 @@ package sql
 import (
 	"context"
 	stdSql "database/sql"
+	"time"
 )
 
 // Conn represents a single database connection rather than a pool of database
@@ -20,6 +21,9 @@ type Conn struct {
 	conn         *stdSql.Conn
 	killerPool   *stdSql.DB
 	connectionID string
+	serverID     string
+	flavor       string
+	killTimeout  *time.Duration
 }
 
 // Unleak will release the reference to the killerPool
@@ -27,6 +31,9 @@ type Conn struct {
 func (c *Conn) Unleak() {
 	c.killerPool = nil
 	c.connectionID = ""
+	c.serverID = ""
+	c.flavor = ""
+	c.killTimeout = nil
 }
 
 // Begin starts a transaction. The default isolation level is dependent on the driver.
@@ -94,7 +101,7 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args ...interface{
 		select {
 		case <-ctx.Done():
 			// context has been canceled
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.serverID, c.flavor, c.killTimeout)
 			errChan <- ctx.Err()
 		case <-returnedChan:
 		}
@@ -140,7 +147,7 @@ func (c *Conn) PingContext(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			// context has been canceled
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.serverID, c.flavor, c.killTimeout)
 			errChan <- ctx.Err()
 		case <-returnedChan:
 		}
@@ -192,7 +199,7 @@ func (c *Conn) PrepareContext(ctx context.Context, query string) (*Stmt, error) 
 		select {
 		case <-ctx.Done():
 			// context has been canceled
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.serverID, c.flavor, c.killTimeout)
 			errChan <- ctx.Err()
 		case <-returnedChan:
 		}
@@ -204,7 +211,7 @@ func (c *Conn) PrepareContext(ctx context.Context, query string) (*Stmt, error) 
 			errChan <- err
 			return
 		}
-		outChan <- &Stmt{stmt, c.killerPool, c.connectionID}
+		outChan <- &Stmt{stmt, c.killerPool, c.connectionID, c.serverID, c.flavor, c.killTimeout}
 	}()
 
 	select {
@@ -230,7 +237,7 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args ...interface
 	// cancels rows.Scan.
 	defer func() {
 		if ctx.Err() != nil {
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.serverID, c.flavor, c.killTimeout)
 		}
 	}()
 
@@ -258,7 +265,7 @@ func (c *Conn) QueryRowContext(ctx context.Context, query string, args ...interf
 	// Since sql.Row does not export err field, this is the best we can do:
 	defer func() {
 		if ctx.Err() != nil {
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.serverID, c.flavor, c.killTimeout)
 		}
 	}()
 

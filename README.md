@@ -78,6 +78,15 @@ It is highly recommended you set a KillerPool when you instantiate the `DB` obje
 
 The KillerPool is used to call the `KILL` signal.
 
+## Reverse Proxy Support
+
+Currently only MySQL is supported.
+
+```go
+
+pool := &sql.DB{p, kP, sql.MySQL, 3 * time.Second} // Search for correct server for at most 3 seconds
+
+```
 
 #
 

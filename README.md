@@ -78,6 +78,9 @@ It is highly recommended you set a KillerPool when you instantiate the `DB` obje
 
 The KillerPool is used to call the `KILL` signal.
 
+## Reverse Proxy Support
+
+ Checkout the `proxy-protection` branch if your database is behind a reverse proxy in order to better guarantee that you are killing the correct query.
 
 #
 

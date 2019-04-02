@@ -18,7 +18,7 @@ import (
 // connection fail with ErrConnDone.
 type Conn struct {
 	conn         *stdSql.Conn
-	killerPool   *stdSql.DB
+	killerPool   StdSQLDB
 	connectionID string
 }
 

@@ -9,7 +9,7 @@ import (
 type Row struct {
 	ctx          context.Context
 	row          *stdSql.Row
-	killerPool   *stdSql.DB
+	killerPool   StdSQLDB
 	connectionID string
 }
 

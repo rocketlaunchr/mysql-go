@@ -23,10 +23,10 @@ import (
 // can be controlled with SetMaxIdleConns.
 type DB struct {
 	// DB is the primary connection pool
-	DB *stdSql.DB
+	DB StdSQLDB
 	// KillerPool is an optional (but recommended) secondary connection pool.
 	// If provided, it is used to fire KILL signals.
-	KillerPool *stdSql.DB
+	KillerPool StdSQLDB
 }
 
 // Begin starts a transaction. The default isolation level is dependent on

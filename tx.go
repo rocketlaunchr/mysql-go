@@ -20,7 +20,7 @@ import (
 // by the call to Commit or Rollback.
 type Tx struct {
 	tx           *stdSql.Tx
-	killerPool   *stdSql.DB
+	killerPool   StdSQLDB
 	connectionID string
 
 	// Lock and store stmts

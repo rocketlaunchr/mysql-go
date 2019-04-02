@@ -2,14 +2,10 @@
 
 package sql
 
-import (
-	stdSql "database/sql"
-)
-
 // kill is used to kill a running query.
 // It is advised that db be another pool that the
 // connection was NOT derived from.
-func kill(db *stdSql.DB, connectionID string) error {
+func kill(db StdSQLDB, connectionID string) error {
 
 	if connectionID == "" {
 		return nil

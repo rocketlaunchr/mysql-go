@@ -11,7 +11,7 @@ import (
 // A Stmt is safe for concurrent use by multiple goroutines.
 type Stmt struct {
 	stmt         *stdSql.Stmt
-	killerPool   *stdSql.DB
+	killerPool   StdSQLDB
 	connectionID string
 }
 

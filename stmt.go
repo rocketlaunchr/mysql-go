@@ -10,7 +10,7 @@ import (
 // Stmt is a prepared statement.
 // A Stmt is safe for concurrent use by multiple goroutines.
 type Stmt struct {
-	*stdSql.Stmt
+	stmt         *stdSql.Stmt
 	killerPool   *stdSql.DB
 	connectionID string
 }
@@ -24,7 +24,7 @@ func (s *Stmt) Unleak() {
 
 // Close closes the statement.
 func (s *Stmt) Close() error {
-	err := s.Close()
+	err := s.stmt.Close()
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (stdSql.Res
 	}()
 
 	go func() {
-		res, err := s.ExecContext(cancelCtx, args...)
+		res, err := s.stmt.ExecContext(cancelCtx, args...)
 		if err != nil {
 			errChan <- err
 			return
@@ -83,13 +83,13 @@ func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (stdSql.Res
 
 // Query executes a prepared query statement with the given arguments
 // and returns the query results as a *Rows.
-func (s *Stmt) Query(args ...interface{}) (*stdSql.Rows, error) {
+func (s *Stmt) Query(args ...interface{}) (*Rows, error) {
 	return s.QueryContext(context.Background(), args...)
 }
 
 // QueryContext executes a prepared query statement with the given arguments
 // and returns the query results as a *Rows.
-func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*stdSql.Rows, error) {
+func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*Rows, error) {
 
 	// We can't use the same approach used in ExecContext because defer cancelFunc()
 	// cancels rows.Scan.
@@ -99,7 +99,8 @@ func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*stdSql.R
 		}
 	}()
 
-	return s.QueryContext(ctx, args...)
+	rows, err := s.stmt.QueryContext(ctx, args...)
+	return &Rows{ctx: ctx, rows: rows, killerPool: s.killerPool, connectionID: s.connectionID}, err
 }
 
 // QueryRow executes a prepared query statement with the given arguments.
@@ -113,7 +114,7 @@ func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*stdSql.R
 //
 //  var name string
 //  err := nameByUseridStmt.QueryRow(id).Scan(&name)
-func (s *Stmt) QueryRow(args ...interface{}) *stdSql.Row {
+func (s *Stmt) QueryRow(args ...interface{}) *Row {
 	return s.QueryRowContext(context.Background(), args...)
 }
 
@@ -123,7 +124,7 @@ func (s *Stmt) QueryRow(args ...interface{}) *stdSql.Row {
 // If the query selects no rows, the *Row's Scan will return ErrNoRows.
 // Otherwise, the *Row's Scan scans the first selected row and discards
 // the rest.
-func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *stdSql.Row {
+func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *Row {
 
 	// Since sql.Row does not export err field, this is the best we can do:
 	defer func() {
@@ -132,5 +133,6 @@ func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *stdSql
 		}
 	}()
 
-	return s.QueryRowContext(ctx, args...)
+	row := s.stmt.QueryRowContext(ctx, args...)
+	return &Row{ctx: ctx, row: row, killerPool: s.killerPool, connectionID: s.connectionID}
 }

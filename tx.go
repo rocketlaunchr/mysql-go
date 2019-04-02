@@ -170,12 +170,12 @@ func (tx *Tx) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
 }
 
 // Query executes a query that returns rows, typically a SELECT.
-func (tx *Tx) Query(query string, args ...interface{}) (*stdSql.Rows, error) {
+func (tx *Tx) Query(query string, args ...interface{}) (*Rows, error) {
 	return tx.QueryContext(context.Background(), query, args...)
 }
 
 // QueryContext executes a query that returns rows, typically a SELECT.
-func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*stdSql.Rows, error) {
+func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{}) (*Rows, error) {
 
 	// We can't use the same approach used in ExecContext because defer cancelFunc()
 	// cancels rows.Scan.
@@ -185,7 +185,8 @@ func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{
 		}
 	}()
 
-	return tx.tx.QueryContext(ctx, query, args...)
+	rows, err := tx.tx.QueryContext(ctx, query, args...)
+	return &Rows{ctx: ctx, rows: rows, killerPool: tx.killerPool, connectionID: tx.connectionID}, err
 }
 
 // QueryRow executes a query that is expected to return at most one row.
@@ -194,7 +195,7 @@ func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{
 // If the query selects no rows, the *Row's Scan will return ErrNoRows.
 // Otherwise, the *Row's Scan scans the first selected row and discards
 // the rest.
-func (tx *Tx) QueryRow(query string, args ...interface{}) *stdSql.Row {
+func (tx *Tx) QueryRow(query string, args ...interface{}) *Row {
 	return tx.QueryRowContext(context.Background(), query, args...)
 }
 
@@ -204,7 +205,7 @@ func (tx *Tx) QueryRow(query string, args ...interface{}) *stdSql.Row {
 // If the query selects no rows, the *Row's Scan will return ErrNoRows.
 // Otherwise, the *Row's Scan scans the first selected row and discards
 // the rest.
-func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *stdSql.Row {
+func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *Row {
 
 	// Since sql.Row does not export err field, this is the best we can do:
 	defer func() {
@@ -213,7 +214,8 @@ func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interfa
 		}
 	}()
 
-	return tx.tx.QueryRowContext(ctx, query, args...)
+	row := tx.tx.QueryRowContext(ctx, query, args...)
+	return &Row{ctx: ctx, row: row, killerPool: tx.killerPool, connectionID: tx.connectionID}
 }
 
 // Rollback aborts the transaction.

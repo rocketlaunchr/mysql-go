@@ -9,15 +9,20 @@ import (
 	"time"
 )
 
+// StdSQLLegacy will potentially be removed in Go 2.
+type StdSQLLegacy interface {
+	Exec(query string, args ...interface{}) (stdSql.Result, error)
+	Prepare(query string) (*stdSql.Stmt, error)
+	Query(query string, args ...interface{}) (*stdSql.Rows, error)
+	QueryRow(query string, args ...interface{}) *stdSql.Row
+}
+
 // StdSQLCommon is the interface that allows query and exec interactions with a database.
 type StdSQLCommon interface {
-	Exec(query string, args ...interface{}) (stdSql.Result, error)
+	StdSQLLegacy
 	ExecContext(ctx context.Context, query string, args ...interface{}) (stdSql.Result, error)
-	Prepare(query string) (*stdSql.Stmt, error)
 	PrepareContext(ctx context.Context, query string) (*stdSql.Stmt, error)
-	Query(query string, args ...interface{}) (*stdSql.Rows, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*stdSql.Rows, error)
-	QueryRow(query string, args ...interface{}) *stdSql.Row
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *stdSql.Row
 }
 
@@ -30,7 +35,11 @@ type StdSQLDB interface {
 	Begin() (*stdSql.Tx, error)
 	BeginTx(ctx context.Context, opts *stdSql.TxOptions) (*stdSql.Tx, error)
 	Close() error
+}
 
+// StdSQLDBExtra is the interface that directly maps to a *stdSql.DB.
+type StdSQLDBExtra interface {
+	StdSQLDB
 	Driver() driver.Driver
 	SetConnMaxLifetime(d time.Duration)
 	SetMaxIdleConns(n int)

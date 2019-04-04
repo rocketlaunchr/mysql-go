@@ -14,7 +14,7 @@ var errRetry = errors.New("retry")
 // kill is used to kill a running query.
 // It is advised that db be another pool that the
 // connection was NOT derived from.
-func kill(db *stdSql.DB, connectionID, serverID, flavor string, killTimeout *time.Duration) error {
+func kill(db StdSQLDB, connectionID, serverID, flavor string, killTimeout *time.Duration) error {
 
 	if connectionID == "" {
 		return nil

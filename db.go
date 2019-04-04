@@ -27,12 +27,11 @@ const (
 // connection is returned to DB's idle connection pool. The pool size
 // can be controlled with SetMaxIdleConns.
 type DB struct {
-	// DB is the primary connection pool
-	DB *stdSql.DB
-
-	// KillerPool is an optional (but recommended) secondary connection pool.
+	// DB is the primary connection pool (i.e. *stdSql.DB).
+	DB StdSQLDBExtra
+	// KillerPool is an optional (but recommended) secondary connection pool (i.e. *stdSql.DB).
 	// If provided, it is used to fire KILL signals.
-	KillerPool *stdSql.DB
+	KillerPool StdSQLDBExtra
 
 	// Flavor is either "mysql" or "mariadb". The default is mysql when not set.
 	Flavor string

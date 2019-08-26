@@ -1,0 +1,9 @@
+linters-settings:
+  gocyclo:
+    min-complexity: 10
+
+linters:
+  enable-all: true
+  disable:
+    - maligned
+    - depguard

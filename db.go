@@ -1,4 +1,4 @@
-// Copyright 2018 PJ Engineering and Business Solutions Pty. Ltd. All rights reserved.
+// Copyright 2018-19 PJ Engineering and Business Solutions Pty. Ltd. All rights reserved.
 
 package sql
 
@@ -6,8 +6,121 @@ import (
 	"context"
 	stdSql "database/sql"
 	"database/sql/driver"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
+
+// Open opens a database specified by its connection information.
+//
+// You will need to import "github.com/go-sql-driver/mysql".
+//
+// Open will just validate its arguments without creating a connection
+// to the database. To verify that the data source name is valid, call
+// Ping.
+//
+// The returned DB contains 2 pools. The KillerPool is configured to have only
+// 1 max open connection. It is for internal use only.
+//
+// The returned DB is safe for concurrent use by multiple goroutines
+// and maintains its own pool of idle connections. Thus, the Open
+// function should be called just once. It is rarely necessary to
+// close a DB. For the cancelation feature, a Conn needs to be created.
+func Open(dataSourceName string) (*DB, error) {
+
+	var (
+		mp *stdSql.DB
+		kp *stdSql.DB
+	)
+
+	var g errgroup.Group
+
+	g.Go(func() error {
+		pool, err := stdSql.Open("mysql", dataSourceName)
+		if err != nil {
+			return err
+		}
+
+		mp = pool
+		return nil
+	})
+
+	g.Go(func() error {
+		pool, err := stdSql.Open("mysql", dataSourceName)
+		if err != nil {
+			return err
+		}
+
+		kp = pool
+		kp.SetMaxOpenConns(1)
+		return nil
+	})
+
+	err := g.Wait()
+	if err != nil {
+		if mp != nil {
+			mp.Close()
+		}
+
+		if kp != nil {
+			kp.Close()
+		}
+
+		return nil, err
+	}
+
+	return &DB{
+		DB:         mp,
+		KillerPool: kp,
+	}, nil
+}
+
+// OpenDB opens a database using a Connector, allowing drivers to
+// bypass a string based data source name.
+//
+// You will need to import "github.com/go-sql-driver/mysql".
+//
+// OpenDB will just validate its arguments without creating a connection
+// to the database. To verify that the data source name is valid, call
+// Ping.
+//
+// The returned DB contains 2 pools. The KillerPool is configured to have only
+// 1 max open connection. It is for internal use only.
+//
+// The returned DB is safe for concurrent use by multiple goroutines
+// and maintains its own pool of idle connections. Thus, the OpenDB
+// function should be called just once. It is rarely necessary to
+// close a DB. For the cancelation feature, a Conn needs to be created.
+func OpenDB(c driver.Connector) *DB {
+
+	var (
+		mp *stdSql.DB
+		kp *stdSql.DB
+	)
+
+	var wg sync.WaitGroup
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		mp = stdSql.OpenDB(c)
+	}()
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		kp = stdSql.OpenDB(c)
+		kp.SetMaxOpenConns(1)
+	}()
+
+	wg.Wait()
+
+	return &DB{
+		DB:         mp,
+		KillerPool: kp,
+	}
+}
 
 // DB is a database handle representing a pool of zero or more
 // underlying connections. It's safe for concurrent use by multiple
@@ -22,8 +135,10 @@ import (
 // connection is returned to DB's idle connection pool. The pool size
 // can be controlled with SetMaxIdleConns.
 type DB struct {
+
 	// DB is the primary connection pool (i.e. *stdSql.DB).
 	DB StdSQLDBExtra
+
 	// KillerPool is an optional (but recommended) secondary connection pool (i.e. *stdSql.DB).
 	// If provided, it is used to fire KILL signals.
 	KillerPool StdSQLDBExtra
@@ -56,6 +171,10 @@ func (db *DB) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (*stdSql.Tx, 
 // It is rare to Close a DB, as the DB handle is meant to be
 // long-lived and shared between many goroutines.
 func (db *DB) Close() error {
+	if db.KillerPool != nil {
+		db.KillerPool.Close()
+	}
+
 	return db.DB.Close()
 }
 

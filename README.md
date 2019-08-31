@@ -1,16 +1,14 @@
-Canceling MySQL in Go [![GoDoc](http://godoc.org/github.com/rocketlaunchr/mysql-go?status.svg)](http://godoc.org/github.com/rocketlaunchr/mysql-go) [![Go Report Card](https://goreportcard.com/badge/github.com/rocketlaunchr/mysql-go)](https://goreportcard.com/report/github.com/rocketlaunchr/mysql-go)
-===============
+# Canceling MySQL in Go [![GoDoc](http://godoc.org/github.com/rocketlaunchr/mysql-go?status.svg)](http://godoc.org/github.com/rocketlaunchr/mysql-go) [![Go Report Card](https://goreportcard.com/badge/github.com/rocketlaunchr/mysql-go)](https://goreportcard.com/report/github.com/rocketlaunchr/mysql-go)
 
-This is an experimental package to help you properly cancel MySQL queries. Without this package, context cancelation does not actually cancel a MySQL query.
-It may or may not be suitable for your needs. Field reports are greatly appreciated.
+This package will properly implement context cancelation for MySQL. Without this package, context cancelation does not actually cancel a MySQL query.
 
 See [Article](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827ed8f83b30) for details of the behind-the-scenes magic.
 
-The API is designed to resemble the standard library.
+The API is designed to resemble the standard library. It is fully compatible with the [dbq](https://github.com/rocketlaunchr/dbq) package which allows for zero boilerplate database operations in Go.
 
 ## Dependencies
 
-* [Go MySQL Driver](https://github.com/go-sql-driver/mysql)
+-   [Go MySQL Driver](https://github.com/go-sql-driver/mysql)
 
 ## Installation
 
@@ -80,7 +78,7 @@ The KillerPool is used to call the `KILL` signal.
 
 ## Reverse Proxy Support
 
- Checkout the `proxy-protection` branch if your database is behind a reverse proxy in order to better guarantee that you are killing the correct query.
+Checkout the `proxy-protection` branch if your database is behind a reverse proxy in order to better guarantee that you are killing the correct query.
 
 #
 
@@ -88,7 +86,7 @@ The KillerPool is used to call the `KILL` signal.
 
 The license is a modified MIT license. Refer to `LICENSE` file for more details.
 
-**© 2018 PJ Engineering and Business Solutions Pty. Ltd.**
+**© 2018-19 PJ Engineering and Business Solutions Pty. Ltd.**
 
 ### Final Notes
 

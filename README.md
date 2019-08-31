@@ -24,7 +24,7 @@ import (
    sql "github.com/rocketlaunchr/mysql-go"
 )
 
-pool, _ := sql.Open("user:password@/dbname")
+pool, _ := sql.Open("user:password@tcp(localhost:3306)/db")
 
 ```
 

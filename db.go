@@ -171,6 +171,11 @@ func (db *DB) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (*stdSql.Tx, 
 // It is rare to Close a DB, as the DB handle is meant to be
 // long-lived and shared between many goroutines.
 func (db *DB) Close() error {
+
+	if db.KillerPool == db.DB {
+		return db.DB.Close()
+	}
+
 	if db.KillerPool != nil {
 		db.KillerPool.Close()
 	}

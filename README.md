@@ -21,15 +21,10 @@ go get -u github.com/rocketlaunchr/mysql-go
 ```go
 
 import (
-   stdSql "database/sql"
    sql "github.com/rocketlaunchr/mysql-go"
 )
 
-p, _ := stdSql.Open("mysql", "user:password@/dbname")
-kP, _ := stdSql.Open("mysql", "user:password@/dbname") // KillerPool
-kP.SetMaxOpenConns(1)
-
-pool := &sql.DB{p, kP}
+pool, _ := sql.Open("user:password@/dbname")
 
 ```
 

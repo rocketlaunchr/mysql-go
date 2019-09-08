@@ -27,7 +27,19 @@ import (
 // and maintains its own pool of idle connections. Thus, the Open
 // function should be called just once. It is rarely necessary to
 // close a DB. For the cancelation feature, a Conn needs to be created.
-func Open(dataSourceName string) (*DB, error) {
+func Open(driverName string, dataSourceName ...string) (*DB, error) {
+	var (
+		dn  string
+		dsn string
+	)
+
+	if len(dataSourceName) == 0 {
+		dn = "mysql"
+		dsn = driverName
+	} else {
+		dn = driverName
+		dsn = dataSourceName[0]
+	}
 
 	var (
 		mp *stdSql.DB
@@ -37,7 +49,7 @@ func Open(dataSourceName string) (*DB, error) {
 	var g errgroup.Group
 
 	g.Go(func() error {
-		pool, err := stdSql.Open("mysql", dataSourceName)
+		pool, err := stdSql.Open(dn, dsn)
 		if err != nil {
 			return err
 		}
@@ -47,7 +59,7 @@ func Open(dataSourceName string) (*DB, error) {
 	})
 
 	g.Go(func() error {
-		pool, err := stdSql.Open("mysql", dataSourceName)
+		pool, err := stdSql.Open(dn, dsn)
 		if err != nil {
 			return err
 		}

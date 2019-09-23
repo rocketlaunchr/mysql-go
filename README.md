@@ -6,6 +6,8 @@ See [Article](https://medium.com/@rocketlaunchr.cloud/canceling-mysql-in-go-827e
 
 The API is designed to resemble the standard library. It is fully compatible with the [dbq](https://github.com/rocketlaunchr/dbq) package which allows for zero boilerplate database operations in Go.
 
+⭐ **the project to show your appreciation.**
+
 ## Dependencies
 
 -   [Go MySQL Driver](https://github.com/go-sql-driver/mysql)
@@ -86,5 +88,3 @@ The license is a modified MIT license. Refer to `LICENSE` file for more details.
 ### Final Notes
 
 Feel free to enhance features by issuing pull-requests.
-
-**Star** the project to show your appreciation.

@@ -77,6 +77,14 @@ The KillerPool is used to call the `KILL` signal.
 
 Checkout the `proxy-protection` branch if your database is behind a reverse proxy in order to better guarantee that you are killing the correct query.
 
+## Other useful packages
+
+-   [dataframe-go](https://github.com/rocketlaunchr/dataframe-go) - Statistics and data manipulation
+-   [dbq](https://github.com/rocketlaunchr/dbq) - Zero boilerplate database operations for Go
+-   [igo](https://github.com/rocketlaunchr/igo) - A Go transpiler with cool new syntax such as fordefer (defer for for-loops)
+-   [react](https://github.com/rocketlaunchr/react) - Build front end applications using Go
+-   [remember-go](https://github.com/rocketlaunchr/remember-go) - Cache slow database queries
+
 #
 
 ### Legal Information

@@ -124,49 +124,17 @@ func (tx *Tx) Prepare(query string) (*Stmt, error) {
 // for the execution of the returned statement. The returned statement
 // will run in the transaction context.
 func (tx *Tx) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
-
-	// Create a context that is used to cancel PrepareContext()
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	outChan := make(chan *Stmt)
-	errChan := make(chan error)
-	returnedChan := make(chan struct{}) // Used to indicate that this function has returned
-
-	defer func() {
-		returnedChan <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			// context has been canceled
-			kill(tx.killerPool, tx.connectionID)
-			errChan <- ctx.Err()
-		case <-returnedChan:
-		}
-	}()
-
-	go func() {
-		stmt, err := tx.tx.PrepareContext(cancelCtx, query)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		st := &Stmt{stmt, tx.killerPool, tx.connectionID}
-		tx.lock.Lock()
-		tx.stmts = append(tx.stmts, st)
-		tx.lock.Unlock()
-		outChan <- st
-	}()
-
-	select {
-	case err := <-errChan:
+	// You can not cancel a Prepare.
+	// See: https://github.com/rocketlaunchr/mysql-go/issues/3
+	stmt, err := tx.tx.PrepareContext(ctx, query)
+	if err != nil {
 		return nil, err
-	case out := <-outChan:
-		return out, nil
 	}
-
+	st := &Stmt{stmt, tx.killerPool, tx.connectionID}
+	tx.lock.Lock()
+	tx.stmts = append(tx.stmts, st)
+	tx.lock.Unlock()
+	return st, nil
 }
 
 // Query executes a query that returns rows, typically a SELECT.

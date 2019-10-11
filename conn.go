@@ -124,37 +124,9 @@ func (c *Conn) Ping() error {
 
 // PingContext verifies the connection to the database is still alive.
 func (c *Conn) PingContext(ctx context.Context) error {
-
-	// Create a context that is used to cancel PingContext()
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	errChan := make(chan error)
-	returnedChan := make(chan struct{}) // Used to indicate that this function has returned
-
-	defer func() {
-		returnedChan <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			// context has been canceled
-			kill(c.killerPool, c.connectionID)
-			errChan <- ctx.Err()
-		case <-returnedChan:
-		}
-	}()
-
-	go func() {
-		err := c.conn.PingContext(cancelCtx)
-		errChan <- err
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
-	}
+	// You can not cancel a Ping.
+	// See: https://github.com/rocketlaunchr/mysql-go/issues/3
+	return c.conn.PingContext(ctx)
 }
 
 // Prepare creates a prepared statement for later queries or executions.
@@ -175,45 +147,13 @@ func (c *Conn) Prepare(query string) (*Stmt, error) {
 // The provided context is used for the preparation of the statement, not for the
 // execution of the statement.
 func (c *Conn) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
-
-	// Create a context that is used to cancel PrepareContext()
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	outChan := make(chan *Stmt)
-	errChan := make(chan error)
-	returnedChan := make(chan struct{}) // Used to indicate that this function has returned
-
-	defer func() {
-		returnedChan <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			// context has been canceled
-			kill(c.killerPool, c.connectionID)
-			errChan <- ctx.Err()
-		case <-returnedChan:
-		}
-	}()
-
-	go func() {
-		stmt, err := c.conn.PrepareContext(cancelCtx, query)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		outChan <- &Stmt{stmt, c.killerPool, c.connectionID}
-	}()
-
-	select {
-	case err := <-errChan:
+	// You can not cancel a Prepare.
+	// See: https://github.com/rocketlaunchr/mysql-go/issues/3
+	stmt, err := c.conn.PrepareContext(ctx, query)
+	if err != nil {
 		return nil, err
-	case out := <-outChan:
-		return out, nil
 	}
-
+	return &Stmt{stmt, c.killerPool, c.connectionID}, nil
 }
 
 // Query executes a query that returns rows, typically a SELECT.

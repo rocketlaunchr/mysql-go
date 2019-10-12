@@ -5,6 +5,7 @@ package sql
 import (
 	"context"
 	stdSql "database/sql"
+	"time"
 )
 
 // Conn represents a single database connection rather than a pool of database
@@ -20,6 +21,7 @@ type Conn struct {
 	conn         *stdSql.Conn
 	killerPool   StdSQLDB
 	connectionID string
+	kto          time.Duration
 }
 
 // Unleak will release the reference to the killerPool
@@ -94,7 +96,7 @@ func (c *Conn) ExecContext(ctx context.Context, query string, args ...interface{
 		select {
 		case <-ctx.Done():
 			// context has been canceled
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.kto)
 			errChan <- ctx.Err()
 		case <-returnedChan:
 		}
@@ -153,7 +155,7 @@ func (c *Conn) PrepareContext(ctx context.Context, query string) (*Stmt, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &Stmt{stmt, c.killerPool, c.connectionID}, nil
+	return &Stmt{stmt, c.killerPool, c.connectionID, c.kto}, nil
 }
 
 // Query executes a query that returns rows, typically a SELECT.
@@ -170,7 +172,7 @@ func (c *Conn) QueryContext(ctx context.Context, query string, args ...interface
 	// cancels rows.Scan.
 	defer func() {
 		if ctx.Err() != nil {
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.kto)
 		}
 	}()
 
@@ -199,7 +201,7 @@ func (c *Conn) QueryRowContext(ctx context.Context, query string, args ...interf
 	// Since sql.Row does not export err field, this is the best we can do:
 	defer func() {
 		if ctx.Err() != nil {
-			kill(c.killerPool, c.connectionID)
+			kill(c.killerPool, c.connectionID, c.kto)
 		}
 	}()
 

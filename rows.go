@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	stdSql "database/sql"
+	"time"
 )
 
 // Rows is the result of a query. Its cursor starts before the first row
@@ -12,6 +13,7 @@ type Rows struct {
 	rows         *stdSql.Rows
 	killerPool   StdSQLDB
 	connectionID string
+	kto          time.Duration
 }
 
 // Unleak will release the reference to the killerPool
@@ -19,6 +21,7 @@ type Rows struct {
 func (rs *Rows) Unleak() {
 	rs.killerPool = nil
 	rs.connectionID = ""
+	rs.kto = 0
 }
 
 // Close closes the Rows, preventing further enumeration. If Next is called
@@ -28,7 +31,7 @@ func (rs *Rows) Unleak() {
 func (rs *Rows) Close() error {
 	err := rs.rows.Close()
 	if rs.ctx.Err() != nil {
-		kill(rs.killerPool, rs.connectionID)
+		kill(rs.killerPool, rs.connectionID, rs.kto)
 	}
 	rs.Unleak()
 	return err
@@ -39,7 +42,7 @@ func (rs *Rows) Close() error {
 func (rs *Rows) ColumnTypes() ([]*stdSql.ColumnType, error) {
 	ct, err := rs.rows.ColumnTypes()
 	if rs.ctx.Err() != nil {
-		kill(rs.killerPool, rs.connectionID)
+		kill(rs.killerPool, rs.connectionID, rs.kto)
 	}
 	return ct, err
 }
@@ -49,7 +52,7 @@ func (rs *Rows) ColumnTypes() ([]*stdSql.ColumnType, error) {
 func (rs *Rows) Columns() ([]string, error) {
 	cols, err := rs.rows.Columns()
 	if rs.ctx.Err() != nil {
-		kill(rs.killerPool, rs.connectionID)
+		kill(rs.killerPool, rs.connectionID, rs.kto)
 	}
 	return cols, err
 }
@@ -59,7 +62,7 @@ func (rs *Rows) Columns() ([]string, error) {
 func (rs *Rows) Err() error {
 	err := rs.rows.Err()
 	if rs.ctx.Err() != nil {
-		kill(rs.killerPool, rs.connectionID)
+		kill(rs.killerPool, rs.connectionID, rs.kto)
 	}
 	return err
 }
@@ -146,7 +149,7 @@ func (rs *Rows) NextResultSet() bool {
 func (rs *Rows) Scan(dest ...interface{}) error {
 	err := rs.rows.Scan(dest...)
 	if rs.ctx.Err() != nil {
-		kill(rs.killerPool, rs.connectionID)
+		kill(rs.killerPool, rs.connectionID, rs.kto)
 	}
 	return err
 }

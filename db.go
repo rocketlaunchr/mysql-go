@@ -154,6 +154,10 @@ type DB struct {
 	// KillerPool is an optional (but recommended) secondary connection pool (i.e. *stdSql.DB).
 	// If provided, it is used to fire KILL signals.
 	KillerPool StdSQLDBExtra
+
+	// KillTimeout sets how long to attempt sending the KILL signal.
+	// A value of zero is equivalent to no time limit (not recommended).
+	KillTimeout time.Duration
 }
 
 // Begin starts a transaction. The default isolation level is dependent on
@@ -221,9 +225,9 @@ func (db *DB) Conn(ctx context.Context) (*Conn, error) {
 	}
 
 	if db.KillerPool == nil {
-		return &Conn{conn, db.DB, connectionID}, nil
+		return &Conn{conn, db.DB, connectionID, db.KillTimeout}, nil
 	}
-	return &Conn{conn, db.KillerPool, connectionID}, nil
+	return &Conn{conn, db.KillerPool, connectionID, db.KillTimeout}, nil
 }
 
 // Driver returns the database's underlying driver.

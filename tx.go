@@ -6,6 +6,7 @@ import (
 	"context"
 	stdSql "database/sql"
 	"sync"
+	"time"
 )
 
 // Tx is an in-progress database transaction.
@@ -22,6 +23,7 @@ type Tx struct {
 	tx           *stdSql.Tx
 	killerPool   StdSQLDB
 	connectionID string
+	kto          time.Duration
 
 	// Lock and store stmts
 	lock  sync.Mutex
@@ -33,6 +35,7 @@ type Tx struct {
 func (tx *Tx) Unleak() {
 	tx.killerPool = nil
 	tx.connectionID = ""
+	tx.kto = 0
 }
 
 // Commit commits the transaction.
@@ -79,7 +82,7 @@ func (tx *Tx) ExecContext(ctx context.Context, query string, args ...interface{}
 		select {
 		case <-ctx.Done():
 			// context has been canceled
-			kill(tx.killerPool, tx.connectionID)
+			kill(tx.killerPool, tx.connectionID, tx.kto)
 			errChan <- ctx.Err()
 		case <-returnedChan:
 		}
@@ -124,49 +127,17 @@ func (tx *Tx) Prepare(query string) (*Stmt, error) {
 // for the execution of the returned statement. The returned statement
 // will run in the transaction context.
 func (tx *Tx) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
-
-	// Create a context that is used to cancel PrepareContext()
-	cancelCtx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
-	outChan := make(chan *Stmt)
-	errChan := make(chan error)
-	returnedChan := make(chan struct{}) // Used to indicate that this function has returned
-
-	defer func() {
-		returnedChan <- struct{}{}
-	}()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			// context has been canceled
-			kill(tx.killerPool, tx.connectionID)
-			errChan <- ctx.Err()
-		case <-returnedChan:
-		}
-	}()
-
-	go func() {
-		stmt, err := tx.tx.PrepareContext(cancelCtx, query)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		st := &Stmt{stmt, tx.killerPool, tx.connectionID}
-		tx.lock.Lock()
-		tx.stmts = append(tx.stmts, st)
-		tx.lock.Unlock()
-		outChan <- st
-	}()
-
-	select {
-	case err := <-errChan:
+	// You can not cancel a Prepare.
+	// See: https://github.com/rocketlaunchr/mysql-go/issues/3
+	stmt, err := tx.tx.PrepareContext(ctx, query)
+	if err != nil {
 		return nil, err
-	case out := <-outChan:
-		return out, nil
 	}
-
+	st := &Stmt{stmt, tx.killerPool, tx.connectionID, tx.kto}
+	tx.lock.Lock()
+	tx.stmts = append(tx.stmts, st)
+	tx.lock.Unlock()
+	return st, nil
 }
 
 // Query executes a query that returns rows, typically a SELECT.
@@ -181,7 +152,7 @@ func (tx *Tx) QueryContext(ctx context.Context, query string, args ...interface{
 	// cancels rows.Scan.
 	defer func() {
 		if ctx.Err() != nil {
-			kill(tx.killerPool, tx.connectionID)
+			kill(tx.killerPool, tx.connectionID, tx.kto)
 		}
 	}()
 
@@ -210,7 +181,7 @@ func (tx *Tx) QueryRowContext(ctx context.Context, query string, args ...interfa
 	// Since sql.Row does not export err field, this is the best we can do:
 	defer func() {
 		if ctx.Err() != nil {
-			kill(tx.killerPool, tx.connectionID)
+			kill(tx.killerPool, tx.connectionID, tx.kto)
 		}
 	}()
 
@@ -269,7 +240,7 @@ func (tx *Tx) Stmt(stmt *stdSql.Stmt) *Stmt {
 // when the transaction has been committed or rolled back.
 func (tx *Tx) StmtContext(ctx context.Context, stmt *stdSql.Stmt) *Stmt {
 
-	st := &Stmt{tx.tx.StmtContext(ctx, stmt), tx.killerPool, tx.connectionID}
+	st := &Stmt{tx.tx.StmtContext(ctx, stmt), tx.killerPool, tx.connectionID, tx.kto}
 	tx.lock.Lock()
 	tx.stmts = append(tx.stmts, st)
 	tx.lock.Unlock()

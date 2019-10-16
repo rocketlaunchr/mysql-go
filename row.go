@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	stdSql "database/sql"
+	"time"
 )
 
 // Row is the result of calling QueryRow to select a single row.
@@ -11,6 +12,7 @@ type Row struct {
 	row          *stdSql.Row
 	killerPool   StdSQLDB
 	connectionID string
+	kto          time.Duration
 }
 
 // Scan copies the columns from the matched row into the values
@@ -21,7 +23,7 @@ type Row struct {
 func (r *Row) Scan(dest ...interface{}) error {
 	err := r.row.Scan(dest...)
 	if r.ctx.Err() != nil {
-		kill(r.killerPool, r.connectionID)
+		kill(r.killerPool, r.connectionID, r.kto)
 	}
 	return err
 }

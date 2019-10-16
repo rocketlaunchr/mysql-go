@@ -5,6 +5,7 @@ package sql
 import (
 	"context"
 	stdSql "database/sql"
+	"time"
 )
 
 // Stmt is a prepared statement.
@@ -13,6 +14,7 @@ type Stmt struct {
 	stmt         *stdSql.Stmt
 	killerPool   StdSQLDB
 	connectionID string
+	kto          time.Duration
 }
 
 // Unleak will release the reference to the killerPool
@@ -20,6 +22,7 @@ type Stmt struct {
 func (s *Stmt) Unleak() {
 	s.killerPool = nil
 	s.connectionID = ""
+	s.kto = 0
 }
 
 // Close closes the statement.
@@ -58,7 +61,7 @@ func (s *Stmt) ExecContext(ctx context.Context, args ...interface{}) (stdSql.Res
 		select {
 		case <-ctx.Done():
 			// context has been canceled
-			kill(s.killerPool, s.connectionID)
+			kill(s.killerPool, s.connectionID, s.kto)
 			errChan <- ctx.Err()
 		case <-returnedChan:
 		}
@@ -95,7 +98,7 @@ func (s *Stmt) QueryContext(ctx context.Context, args ...interface{}) (*Rows, er
 	// cancels rows.Scan.
 	defer func() {
 		if ctx.Err() != nil {
-			kill(s.killerPool, s.connectionID)
+			kill(s.killerPool, s.connectionID, s.kto)
 		}
 	}()
 
@@ -129,7 +132,7 @@ func (s *Stmt) QueryRowContext(ctx context.Context, args ...interface{}) *Row {
 	// Since sql.Row does not export err field, this is the best we can do:
 	defer func() {
 		if ctx.Err() != nil {
-			kill(s.killerPool, s.connectionID)
+			kill(s.killerPool, s.connectionID, s.kto)
 		}
 	}()
 
